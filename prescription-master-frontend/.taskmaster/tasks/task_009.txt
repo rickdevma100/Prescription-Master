@@ -1,0 +1,36 @@
+# Task ID: 9
+# Title: Mock API with MSW for local development and dummy data
+# Status: done
+# Dependencies: 3, 1
+# Priority: medium
+# Description: Provide dummy data handling via Mock Service Worker (MSW) for both endpoints to enable development without backend.
+# Details:
+Implementation details:
+- Install MSW: `npm i msw`.
+- src/mocks/handlers.ts
+  import { http, HttpResponse } from 'msw';
+  const samplePrescription = `# Prescription\n\n**Patient:** John Doe, 35, Male\n\n## Symptoms\n- Fever for 3 days\n- Cough\n\n## Diagnosis\n- Viral Fever\n\n## Medicines\n- Paracetamol 500mg — twice daily for 3 days\n\n## Advice\n- Hydration\n- Rest`;
+  export const handlers = [
+    http.post('/api/agent/message', async ({ request }) => {
+      const { message } = await request.json();
+      return HttpResponse.json({ prescription: samplePrescription, agentResponse: `Noted: ${message}` }, { status: 200 });
+    }),
+    http.get('/api/prescription/current', () => HttpResponse.json({ prescription: samplePrescription }))
+  ];
+- src/mocks/browser.ts
+  import { setupWorker } from 'msw';
+  import { handlers } from './handlers';
+  export const worker = setupWorker(...handlers);
+- Enable in `main` entry before rendering when `VITE_USE_MOCKS==='true'`:
+  if(import.meta.env.VITE_USE_MOCKS === 'true'){
+    const { worker } = await import('./mocks/browser');
+    await worker.start({ onUnhandledRequest: 'bypass' });
+  }
+- Document usage in README: set `VITE_USE_MOCKS=true` for dev.
+
+
+# Test Strategy:
+- With `VITE_USE_MOCKS=true`, start dev server and verify:
+  - Sending chat shows agent response echoing message and updates prescription.
+  - GET current prescription loads sample on page load.
+- Turn mocks off and ensure network errors surface as error alerts in ChatPanel.

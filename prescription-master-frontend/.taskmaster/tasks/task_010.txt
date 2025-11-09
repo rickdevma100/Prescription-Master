@@ -1,0 +1,35 @@
+# Task ID: 10
+# Title: Testing (Jest + React Testing Library), accessibility checks, and acceptance criteria verification
+# Status: done
+# Dependencies: 2, 3, 4, 5, 6, 7, 8, 9
+# Priority: medium
+# Description: Set up Jest + RTL, write core unit/integration tests for hooks and components, run basic a11y checks, and verify all acceptance criteria.
+# Details:
+Implementation details:
+- Install testing deps: `npm i -D jest @types/jest ts-jest @testing-library/react @testing-library/jest-dom whatwg-fetch msw`.
+- Configure Jest: `npx ts-jest config:init`; set `testEnvironment: jsdom` and add setupFilesAfterEnv to include `@testing-library/jest-dom`.
+- Example tests:
+  - useChat: mock `sendDoctorInput`, assert message append order and loading toggles.
+  - PrescriptionPanel: renders markdown safely, shows skeleton when loading.
+  - ChatPanel: full flow with MSW: type + send -> loader -> agent bubble.
+  - Layout: render PrescriptionPage with jsdom viewport widths (use `window.resizeTo`) and assert 70/30 classes present on desktop; tabs on mobile.
+- Accessibility: 
+  - Add `aria-*` labels and roles; run basic RTL queries by role.
+  - Optional: add `axe-core` for dev-only checks.
+- CI script updates: add `"test": "jest --passWithNoTests"`.
+- Acceptance criteria mapping:
+  - AC-1: Layout test ensures 70/30 grid spans.
+  - AC-2: Chat triggers API and updates prescription (integration test).
+  - AC-3: Prescription renders formatted markdown.
+  - AC-4: Responsive tests across breakpoints.
+  - AC-5: TS strict config enforced; compile step in CI.
+  - AC-6: Lint and type-check job ensures no console warnings/errors (mock console and assert none in tests where relevant).
+
+
+# Test Strategy:
+- Run test suite: `npm run test`.
+- Manual a11y review with Lighthouse; ensure WCAG 2.1 AA basics (labels, contrast, keyboard nav).
+- Final manual UAT: 
+  - Load page: blank prescription + chat visible.
+  - Send sample messages: verify agent output and prescription update.
+  - Resize to tablet/mobile and verify behavior.

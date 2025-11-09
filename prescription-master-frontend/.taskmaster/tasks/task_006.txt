@@ -1,0 +1,46 @@
+# Task ID: 6
+# Title: MessageBubble and InputBox components
+# Status: done
+# Dependencies: 2
+# Priority: high
+# Description: Implement chat message bubble (left/right alignment) and input box with Send button, Enter-to-send, and optional voice input placeholder.
+# Details:
+Implementation details:
+- src/components/MessageBubble.tsx
+  type Props = { role: 'doctor'|'agent'; content: string };
+  export default function MessageBubble({ role, content }: Props){
+    const isUser = role==='doctor';
+    return (
+      <div className={`flex ${isUser?'justify-end':'justify-start'} my-1`}>
+        <div aria-label={isUser?'Doctor message':'Agent message'}
+             className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow ${isUser?'bg-brand.primary text-white':'bg-brand.secondary text-gray-900'}`}>
+          {content}
+        </div>
+      </div>
+    );
+  }
+
+- src/components/InputBox.tsx
+  import { useState } from 'react';
+  type Props = { disabled?: boolean; onSend: (text:string)=>void };
+  export default function InputBox({ disabled, onSend }: Props){
+    const [text, setText] = useState('');
+    const send = ()=>{ if(text.trim()){ onSend(text.trim()); setText(''); }};
+    return (
+      <div className="flex items-center gap-2 p-2 border-t">
+        <button className="hidden" aria-label="Voice input (coming soon)" title="Voice input (coming soon)" disabled>🎤</button>
+        <input aria-label="Chat input" className="flex-1 border rounded px-3 py-2" placeholder="Type here…" value={text}
+               onChange={e=>setText(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } }} disabled={disabled} />
+        <button className="bg-brand.primary text-white px-4 py-2 rounded disabled:opacity-50" onClick={send} disabled={disabled}>Send</button>
+      </div>
+    );
+  }
+- Ensure input is accessible (labels/aria) and keyboard friendly.
+
+
+# Test Strategy:
+- Unit tests: 
+  - Enter key triggers onSend and clears input.
+  - Button disabled when `disabled` prop is true.
+  - MessageBubble aligns correctly for doctor vs agent.
+- Accessibility check: tab order to input and send button; ARIA labels present.

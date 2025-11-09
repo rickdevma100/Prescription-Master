@@ -1,0 +1,38 @@
+# Task ID: 2
+# Title: Styling setup (Tailwind CSS, global styles, fonts, color palette)
+# Status: done
+# Dependencies: 1
+# Priority: high
+# Description: Configure Tailwind CSS, global styles (Inter or Roboto), and a medical-grade color palette. Ensure responsive utilities are available.
+# Details:
+Implementation steps:
+- Install Tailwind: `npm i -D tailwindcss postcss autoprefixer && npx tailwindcss init -p`.
+- tailwind.config.js content:
+  module.exports = {
+    content: ['./index.html','./src/**/*.{ts,tsx}'],
+    theme: {
+      extend: {
+        colors: {
+          brand: {
+            primary: '#1976D2', // medical blue
+            secondary: '#E3F2FD',
+            gray: '#F5F7FA'
+          }
+        },
+        fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'] }
+      }
+    },
+    plugins: []
+  }
+- Import Google Font in `index.html` or via CSS: `<link rel="preconnect" href="https://fonts.googleapis.com" /><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />`.
+- Create `src/styles/globals.css`:
+  @tailwind base; @tailwind components; @tailwind utilities;
+  html, body, #root { height:100%; }
+  body { @apply bg-white text-gray-900 font-sans; }
+- Define utility classes for bubbles: `.bubble-ai` and `.bubble-user` using Tailwind @apply.
+
+
+# Test Strategy:
+- Visual smoke test: verify classes render by creating a demo component using brand colors and fonts.
+- Accessibility quick check: ensure default contrast for text/background meets WCAG AA (use devtools Lighthouse).
+- Responsive sanity: Resize devtools to check Tailwind breakpoints are effective.

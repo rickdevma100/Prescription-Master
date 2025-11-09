@@ -1,0 +1,50 @@
+# Task ID: 8
+# Title: PrescriptionPage layout and responsive behavior (70/30 split, tablet stack, mobile tabs)
+# Status: done
+# Dependencies: 2, 5, 7
+# Priority: high
+# Description: Create the main page that arranges PrescriptionPanel (70%) and ChatPanel (30%) on desktop, stacks vertically on tablet, and shows tab toggle on mobile.
+# Details:
+Implementation details:
+- src/pages/PrescriptionPage.tsx
+  import { useState } from 'react';
+  import PrescriptionPanel from '../components/PrescriptionPanel';
+  import ChatPanel from '../components/ChatPanel';
+  import { usePrescription } from '../hooks/usePrescription';
+  export default function PrescriptionPage(){
+    const { prescription, loading } = usePrescription();
+    const [mobileTab, setMobileTab] = useState<'prescription'|'chat'>('prescription');
+    return (
+      <div className="h-screen p-3 md:p-4 bg-white">
+        {/* Mobile tabs */}
+        <div className="md:hidden flex gap-2 mb-2">
+          <button onClick={()=>setMobileTab('prescription')} className={`flex-1 py-2 rounded ${mobileTab==='prescription'?'bg-brand.primary text-white':'bg-brand.secondary'}`}>Prescription</button>
+          <button onClick={()=>setMobileTab('chat')} className={`flex-1 py-2 rounded ${mobileTab==='chat'?'bg-brand.primary text-white':'bg-brand.secondary'}`}>Chat</button>
+        </div>
+        {/* Desktop/tablet layout */}
+        <div className="hidden md:grid h-[calc(100%-1rem)] grid-cols-10 gap-4">
+          <div className="col-span-7"><PrescriptionPanel prescription={prescription} loading={loading} /></div>
+          <div className="col-span-3"><ChatPanel/></div>
+        </div>
+        {/* Mobile content */}
+        <div className="md:hidden h-[calc(100%-3.5rem)]">
+          {mobileTab==='prescription' ? (
+            <PrescriptionPanel prescription={prescription} loading={loading}/>
+          ) : (
+            <ChatPanel/>
+          )}
+        </div>
+      </div>
+    );
+  }
+- Accepts prescription from hook; ChatPanel updates it via hook internals.
+- Tablet stacking: achieved via `md:grid` (desktop/tablet) and `sm`/`md` breakpoints. If wanting vertical stack on tablet, use `lg:grid` and default vertical; adjust breakpoints as desired.
+- Ensure 70/30 desktop split using `grid-cols-10` with col-span 7/3.
+
+
+# Test Strategy:
+- Responsive tests: 
+  - Desktop width: verify two columns rendered and widths ~70/30 (7/3 spans).
+  - Tablet width: verify vertical stack (adjust breakpoint check).
+  - Mobile width: tab buttons visible; switching tabs toggles panels.
+- Acceptance: Pass AC-1, AC-3, AC-4 visually and via DOM queries.

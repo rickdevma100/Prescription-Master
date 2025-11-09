@@ -1,0 +1,148 @@
+🧾 Product Requirements Document (PRD)
+Product: Doctor’s Prescription Frontend
+Scope: Frontend Only (React + TypeScript)
+Version: 1.0
+Author: [Your Name]
+Date: [Current Date]
+
+1. 📘 Overview
+The goal is to build a responsive frontend interface that allows doctors to easily write prescriptions through a conversational chat-based interface.
+The UI will consist of:
+* A Prescription View Panel (70%) where the structured and formatted prescription is displayed.
+* A Chat Interaction Panel (30%) where doctors input information such as symptoms, medicines, doses, advice, and tests.
+The frontend will interact with a backend (Google Agent Development Kit) via APIs to fetch the processed prescription output.No backend implementation is required — only API integration points and UI flow must be implemented.
+
+2. 🎯 Objectives
+Objective	Description
+Ease of Use	Simplify the prescription-writing process for doctors through a conversational UI.
+Responsiveness	Ensure seamless usage on desktop, tablet, and mobile devices.
+Real-time Preview	Display backend-generated prescription updates in real-time.
+Separation of Concerns	Focus only on frontend development and API integration points.
+3. 🧩 Functional Requirements
+3.1 Layout Split
+Section	Width	Description
+Prescription View Panel	70%	Displays the prescription returned by backend API in a readable structured format.
+Chat Input Panel	30%	Provides a chat-like interface for doctors to input text queries or messages.
+3.2 Prescription View Panel (70%)
+Features:
+* Displays formatted prescription text returned from the backend.
+* Supports sections like:
+    * Patient Info (Name, Age, Gender)
+    * Symptoms
+    * Diagnosis
+    * Prescribed Medicines (Name, Dosage, Frequency, Duration)
+    * Tests/Advice
+* Automatically scrolls to the most recent update.
+* Optionally supports markdown or formatted rich text rendering for readability.
+Tech Implementation:
+* Use a <div> or <Card> component with scrollable content.
+* Data updates dynamically when backend response is received.
+* Support skeleton loaders while waiting for API responses.
+
+3.3 Chat Input Panel (30%)
+Features:
+* Chat-like interface (right side of the screen).
+* Doctor can type text commands such as:
+    * “Patient has fever and cough for 3 days.”
+    * “Add paracetamol 500mg twice a day.”
+* Messages are sent via API call to the backend.
+* Displays both doctor’s input and backend output messages in conversational format.
+UI Components:
+* Text input field with “Send” button.
+* Message bubbles (aligned left for backend messages, right for doctor inputs).
+* Optional voice input button (placeholder).
+* Auto-scroll to latest message.
+Tech Implementation:
+* React functional components with TypeScript.
+* State management with React Hooks or Zustand/Recoil.
+* API call triggered on “Send” button click.
+* Loading indicator while awaiting response.
+
+3.4 API Integration Points
+Action	Method	Endpoint (Placeholder)	Request Payload	Response
+Send doctor input	POST	/api/agent/message	{ "message": string }	{ "prescription": string, "agentResponse": string }
+Fetch full prescription	GET	/api/prescription/current	—	{ "prescription": string }
+Note:Backend (Google Agent Development Kit) will process input and return formatted prescription data.Frontend only needs to call the API and update the UI.
+
+4. 💻 Technical Requirements
+Requirement	Description
+Framework	React 18+
+Language	TypeScript
+Styling	Tailwind CSS or Material UI
+State Management	React Hooks / Zustand / Recoil
+API Handling	Axios or Fetch
+Routing (if needed)	React Router DOM
+Build Tool	Vite or CRA
+Responsiveness	Use CSS Grid or Flexbox; Mobile-friendly layout
+Code Quality	ESLint + Prettier
+Testing	Jest + React Testing Library (optional)
+5. 📱 UI/UX Design Requirements
+5.1 Layout Structure
+
+----------------------------------------------------------
+|                  Prescription View (70%)               |
+|--------------------------------------------------------|
+|                  Chat Input Panel (30%)                |
+----------------------------------------------------------
+* Desktop View: Horizontal split (70% left / 30% right).
+* Tablet View: Stack vertically with Prescription on top, Chat below.
+* Mobile View: Toggle between Prescription and Chat tabs.
+5.2 Colors and Style
+* Professional medical-grade color palette (white, light blue, gray).
+* Font: Roboto or Inter.
+* Prescription section should use readable, clean typography.
+* Chat bubbles should have subtle color differences for user and AI messages.
+
+6. 🔄 User Flow
+1. Doctor opens the app.The page loads a blank prescription preview on the left and a chat window on the right.
+2. Doctor types input (e.g., “Patient has fever for 3 days”).→ Clicks Send.
+3. Frontend sends API request to backend (/api/agent/message).→ Displays loading spinner in chat.
+4. Backend responds with structured prescription and agent message.→ Chat updates with agent message.→ Prescription area updates with formatted output.
+5. Doctor continues conversation, refining or adding details.→ Prescription updates dynamically.
+
+7. ⚙️ Non-Functional Requirements
+Category	Requirement
+Performance	API responses rendered within 300ms post-response
+Accessibility	WCAG 2.1 AA compliant
+Security	Sanitize user inputs before sending to API
+Scalability	Code should support easy integration with future modules (e.g., patient list, history)
+Maintainability	Code must follow modular component structure
+8. 🧱 Suggested Component Structure
+
+src/
+ ├── components/
+ │   ├── ChatPanel.tsx
+ │   ├── PrescriptionPanel.tsx
+ │   ├── MessageBubble.tsx
+ │   ├── InputBox.tsx
+ │
+ ├── hooks/
+ │   ├── useChat.ts
+ │   ├── usePrescription.ts
+ │
+ ├── api/
+ │   ├── agentApi.ts
+ │
+ ├── pages/
+ │   ├── PrescriptionPage.tsx
+ │
+ ├── App.tsx
+ ├── index.tsx
+ ├── styles/
+ │   ├── globals.css
+
+9. 🧩 Deliverables
+* Fully responsive React + TypeScript frontend.
+* Integration-ready for backend API endpoints.
+* Clean, readable, and maintainable code.
+* Dummy data handling until backend is connected.
+
+10. ✅ Acceptance Criteria
+ID	Criteria	Status
+AC-1	Layout correctly splits 70%/30%	☐
+AC-2	Chat input triggers API call and updates prescription	☐
+AC-3	Prescription displays formatted text	☐
+AC-4	Works responsively on desktop, tablet, and mobile	☐
+AC-5	TypeScript types strictly enforced	☐
+AC-6	No console warnings or TypeScript errors	☐
+

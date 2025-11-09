@@ -1,0 +1,41 @@
+# Task ID: 3
+# Title: API module (agentApi.ts) with Axios, types, and input sanitization
+# Status: done
+# Dependencies: 1
+# Priority: high
+# Description: Implement API client for POST /api/agent/message and GET /api/prescription/current with TypeScript types, env-based baseURL, and message sanitization.
+# Details:
+Implementation details:
+- Install Axios: `npm i axios`.
+- src/api/agentApi.ts
+  import axios from 'axios';
+  const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || '' });
+  api.interceptors.response.use(r=>r, e=>Promise.reject(e));
+
+  export type AgentMessageRequest = { message: string };
+  export type AgentMessageResponse = { prescription: string; agentResponse: string };
+  export type CurrentPrescriptionResponse = { prescription: string };
+
+  // Basic outbound sanitization (strip HTML tags) to meet security req
+  export function sanitizeMessage(input: string): string {
+    return input.replace(/<[^>]*>/g,'').trim();
+  }
+
+  export async function sendDoctorInput(message: string): Promise<AgentMessageResponse> {
+    const payload: AgentMessageRequest = { message: sanitizeMessage(message) };
+    const { data } = await api.post<AgentMessageResponse>('/api/agent/message', payload);
+    return data;
+  }
+
+  export async function fetchCurrentPrescription(): Promise<string> {
+    const { data } = await api.get<CurrentPrescriptionResponse>('/api/prescription/current');
+    return data.prescription || '';
+  }
+- Error mapping helper to produce user-friendly messages.
+- Performance note: render immediately upon response (state update in hooks) to meet <=300ms from response to render.
+
+
+# Test Strategy:
+- Unit test (with mocks): mock Axios and verify correct endpoints, payload structure, and return types.
+- Security test: ensure `sanitizeMessage` strips tags like `<script>alert(1)</script>`.
+- Integration test (with MSW later): ensure happy-path and error-path behaviors return expected data/throw.

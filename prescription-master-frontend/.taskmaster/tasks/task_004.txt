@@ -1,0 +1,63 @@
+# Task ID: 4
+# Title: State hooks: useChat and usePrescription (React Hooks)
+# Status: done
+# Dependencies: 3
+# Priority: high
+# Description: Create reusable hooks to manage chat messages, loading/error states, and the current prescription. Integrate API calls and expose actions.
+# Details:
+Implementation details:
+- Types:
+  type Role = 'doctor' | 'agent';
+  type ChatMessage = { id: string; role: Role; content: string; ts: number };
+
+- src/hooks/usePrescription.ts
+  import { useEffect, useState, useCallback } from 'react';
+  import { fetchCurrentPrescription } from '../api/agentApi';
+  export function usePrescription(){
+    const [prescription, setPrescription] = useState<string>('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string|null>(null);
+    const refresh = useCallback(async()=>{ setLoading(true); setError(null);
+      try { const p = await fetchCurrentPrescription(); setPrescription(p);} catch(e:any){ setError('Failed to load prescription'); }
+      finally{ setLoading(false);} },[]);
+    useEffect(()=>{ refresh(); },[refresh]);
+    return { prescription, setPrescription, loading, error, refresh };
+  }
+
+- src/hooks/useChat.ts
+  import { useRef, useState } from 'react';
+  import { sendDoctorInput } from '../api/agentApi';
+  import { usePrescription } from './usePrescription';
+  const uid = () => Math.random().toString(36).slice(2);
+  export function useChat(){
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string|null>(null);
+    const { setPrescription } = usePrescription(); // note: in component, provide same instance or lift up if needed
+    const scrollRef = useRef<HTMLDivElement|null>(null);
+
+    const send = async (text: string) => {
+      if(!text.trim() || loading) return;
+      setError(null); setLoading(true);
+      const userMsg: ChatMessage = { id: uid(), role:'doctor', content: text.trim(), ts: Date.now() };
+      setMessages(prev => [...prev, userMsg]);
+      try {
+        const res = await sendDoctorInput(text.trim());
+        setMessages(prev => [...prev, { id: uid(), role:'agent', content: res.agentResponse, ts: Date.now() }]);
+        setPrescription(res.prescription);
+      } catch(e:any){ setError('Failed to send message'); }
+      finally { setLoading(false); scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }); }
+    };
+
+    return { messages, loading, error, send, scrollRef };
+  }
+- Note: To avoid multiple instances of usePrescription, lift prescription state to parent page and pass setter into useChat or refactor useChat to accept a callback `onPrescriptionUpdate`.
+
+
+# Test Strategy:
+- Hook tests with React Testing Library hooks or within component: 
+  - On `send`, messages length increases by 1 (doctor) and then includes agent message after promise resolves.
+  - Prescription updates after successful send.
+  - Loading toggles true -> false and input disabled during loading.
+  - Error state set on API failure.
+- Verify scrollRef gets scrolled after message append (mock ref).

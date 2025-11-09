@@ -1,0 +1,151 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Project setup (Vite + React 18 + TypeScript) and repository scaffolding",
+        "description": "Initialize the React + TypeScript app with Vite, strict TS settings, ESLint + Prettier, and the suggested folder structure.",
+        "details": "Implementation steps:\n- Create app: `npm create vite@latest doctors-prescription-frontend -- --template react-ts`\n- Install deps: `cd doctors-prescription-frontend && npm i`\n- ESLint/Prettier: `npm i -D eslint prettier eslint-config-prettier eslint-plugin-react eslint-plugin-react-hooks @typescript-eslint/parser @typescript-eslint/eslint-plugin`\n- Configure `.eslintrc.cjs` with React 18, TS rules (strict true, noImplicitAny, exactOptionalPropertyTypes, noUnusedLocals).\n- Update `tsconfig.json`: set `\"strict\": true`, `\"jsx\": \"react-jsx\"`.\n- Create folders per PRD: `src/components`, `src/hooks`, `src/api`, `src/pages`, `src/styles`.\n- Add `App.tsx`, `index.tsx` using `createRoot` from React 18.\n- Add `.env.example` with `VITE_API_BASE_URL=` and `VITE_USE_MOCKS=false`.\n- Pseudo-code scaffold:\n  // index.tsx\n  import { createRoot } from 'react-dom/client';\n  import App from './App';\n  import './styles/globals.css';\n  createRoot(document.getElementById('root')!).render(<App />);\n\n  // App.tsx\n  export default function App(){\n    return (<PrescriptionPage/>);\n  }\n\n  // pages/PrescriptionPage.tsx (placeholder)\n  export default function PrescriptionPage(){ return <div>Loading UI…</div>; }\n",
+        "testStrategy": "- Run `npm run lint` to ensure no ESLint errors.\n- Build and type-check: `npm run build`.\n- Verify TS strict mode by introducing a type error and confirming compiler blocks it.\n- Ensure project starts: `npm run dev` and page loads without console warnings.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Styling setup (Tailwind CSS, global styles, fonts, color palette)",
+        "description": "Configure Tailwind CSS, global styles (Inter or Roboto), and a medical-grade color palette. Ensure responsive utilities are available.",
+        "details": "Implementation steps:\n- Install Tailwind: `npm i -D tailwindcss postcss autoprefixer && npx tailwindcss init -p`.\n- tailwind.config.js content:\n  module.exports = {\n    content: ['./index.html','./src/**/*.{ts,tsx}'],\n    theme: {\n      extend: {\n        colors: {\n          brand: {\n            primary: '#1976D2', // medical blue\n            secondary: '#E3F2FD',\n            gray: '#F5F7FA'\n          }\n        },\n        fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'] }\n      }\n    },\n    plugins: []\n  }\n- Import Google Font in `index.html` or via CSS: `<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" /><link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap\" rel=\"stylesheet\" />`.\n- Create `src/styles/globals.css`:\n  @tailwind base; @tailwind components; @tailwind utilities;\n  html, body, #root { height:100%; }\n  body { @apply bg-white text-gray-900 font-sans; }\n- Define utility classes for bubbles: `.bubble-ai` and `.bubble-user` using Tailwind @apply.\n",
+        "testStrategy": "- Visual smoke test: verify classes render by creating a demo component using brand colors and fonts.\n- Accessibility quick check: ensure default contrast for text/background meets WCAG AA (use devtools Lighthouse).\n- Responsive sanity: Resize devtools to check Tailwind breakpoints are effective.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "API module (agentApi.ts) with Axios, types, and input sanitization",
+        "description": "Implement API client for POST /api/agent/message and GET /api/prescription/current with TypeScript types, env-based baseURL, and message sanitization.",
+        "details": "Implementation details:\n- Install Axios: `npm i axios`.\n- src/api/agentApi.ts\n  import axios from 'axios';\n  const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || '' });\n  api.interceptors.response.use(r=>r, e=>Promise.reject(e));\n\n  export type AgentMessageRequest = { message: string };\n  export type AgentMessageResponse = { prescription: string; agentResponse: string };\n  export type CurrentPrescriptionResponse = { prescription: string };\n\n  // Basic outbound sanitization (strip HTML tags) to meet security req\n  export function sanitizeMessage(input: string): string {\n    return input.replace(/<[^>]*>/g,'').trim();\n  }\n\n  export async function sendDoctorInput(message: string): Promise<AgentMessageResponse> {\n    const payload: AgentMessageRequest = { message: sanitizeMessage(message) };\n    const { data } = await api.post<AgentMessageResponse>('/api/agent/message', payload);\n    return data;\n  }\n\n  export async function fetchCurrentPrescription(): Promise<string> {\n    const { data } = await api.get<CurrentPrescriptionResponse>('/api/prescription/current');\n    return data.prescription || '';\n  }\n- Error mapping helper to produce user-friendly messages.\n- Performance note: render immediately upon response (state update in hooks) to meet <=300ms from response to render.\n",
+        "testStrategy": "- Unit test (with mocks): mock Axios and verify correct endpoints, payload structure, and return types.\n- Security test: ensure `sanitizeMessage` strips tags like `<script>alert(1)</script>`.\n- Integration test (with MSW later): ensure happy-path and error-path behaviors return expected data/throw.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "State hooks: useChat and usePrescription (React Hooks)",
+        "description": "Create reusable hooks to manage chat messages, loading/error states, and the current prescription. Integrate API calls and expose actions.",
+        "details": "Implementation details:\n- Types:\n  type Role = 'doctor' | 'agent';\n  type ChatMessage = { id: string; role: Role; content: string; ts: number };\n\n- src/hooks/usePrescription.ts\n  import { useEffect, useState, useCallback } from 'react';\n  import { fetchCurrentPrescription } from '../api/agentApi';\n  export function usePrescription(){\n    const [prescription, setPrescription] = useState<string>('');\n    const [loading, setLoading] = useState(false);\n    const [error, setError] = useState<string|null>(null);\n    const refresh = useCallback(async()=>{ setLoading(true); setError(null);\n      try { const p = await fetchCurrentPrescription(); setPrescription(p);} catch(e:any){ setError('Failed to load prescription'); }\n      finally{ setLoading(false);} },[]);\n    useEffect(()=>{ refresh(); },[refresh]);\n    return { prescription, setPrescription, loading, error, refresh };\n  }\n\n- src/hooks/useChat.ts\n  import { useRef, useState } from 'react';\n  import { sendDoctorInput } from '../api/agentApi';\n  import { usePrescription } from './usePrescription';\n  const uid = () => Math.random().toString(36).slice(2);\n  export function useChat(){\n    const [messages, setMessages] = useState<ChatMessage[]>([]);\n    const [loading, setLoading] = useState(false);\n    const [error, setError] = useState<string|null>(null);\n    const { setPrescription } = usePrescription(); // note: in component, provide same instance or lift up if needed\n    const scrollRef = useRef<HTMLDivElement|null>(null);\n\n    const send = async (text: string) => {\n      if(!text.trim() || loading) return;\n      setError(null); setLoading(true);\n      const userMsg: ChatMessage = { id: uid(), role:'doctor', content: text.trim(), ts: Date.now() };\n      setMessages(prev => [...prev, userMsg]);\n      try {\n        const res = await sendDoctorInput(text.trim());\n        setMessages(prev => [...prev, { id: uid(), role:'agent', content: res.agentResponse, ts: Date.now() }]);\n        setPrescription(res.prescription);\n      } catch(e:any){ setError('Failed to send message'); }\n      finally { setLoading(false); scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }); }\n    };\n\n    return { messages, loading, error, send, scrollRef };\n  }\n- Note: To avoid multiple instances of usePrescription, lift prescription state to parent page and pass setter into useChat or refactor useChat to accept a callback `onPrescriptionUpdate`.\n",
+        "testStrategy": "- Hook tests with React Testing Library hooks or within component: \n  - On `send`, messages length increases by 1 (doctor) and then includes agent message after promise resolves.\n  - Prescription updates after successful send.\n  - Loading toggles true -> false and input disabled during loading.\n  - Error state set on API failure.\n- Verify scrollRef gets scrolled after message append (mock ref).",
+        "priority": "high",
+        "dependencies": [
+          3
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "PrescriptionPanel component with formatted rendering and auto-scroll",
+        "description": "Build the scrollable prescription viewer that renders backend-formatted text (optionally Markdown), supports skeleton loaders, and auto-scrolls to latest content.",
+        "details": "Implementation details:\n- Install renderer: `npm i react-markdown rehype-sanitize`.\n- src/components/PrescriptionPanel.tsx\n  import React, { useEffect, useRef } from 'react';\n  import ReactMarkdown from 'react-markdown';\n  import rehypeSanitize from 'rehype-sanitize';\n  type Props = { prescription: string; loading: boolean };\n  export default function PrescriptionPanel({ prescription, loading }: Props){\n    const ref = useRef<HTMLDivElement>(null);\n    useEffect(()=>{ if(ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [prescription]);\n    return (\n      <div className=\"h-full overflow-y-auto p-4 bg-white border rounded-md\" ref={ref} aria-label=\"Prescription view\">\n        {loading ? (\n          <div className=\"animate-pulse space-y-3\">\n            <div className=\"h-6 bg-brand.gray rounded\"/>\n            <div className=\"h-4 bg-brand.gray rounded w-5/6\"/>\n            <div className=\"h-4 bg-brand.gray rounded w-4/6\"/>\n          </div>\n        ) : (\n          prescription ? (\n            <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{prescription}</ReactMarkdown>\n          ) : (\n            <p className=\"text-gray-500\">No prescription yet. Start by chatting on the right.</p>\n          )\n        )}\n      </div>\n    );\n  }\n- Styling follows medical-grade palette; uses readable typography.\n",
+        "testStrategy": "- Component test: \n  - Renders skeleton when loading.\n  - Renders markdown headings and lists safely (no raw HTML execution).\n  - Auto-scroll moves to bottom after content updates (assert scrollTop change).\n- Accessibility: `aria-label` present; text readable at 1.1 line-height+ and contrast meets AA.",
+        "priority": "high",
+        "dependencies": [
+          2,
+          4
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "MessageBubble and InputBox components",
+        "description": "Implement chat message bubble (left/right alignment) and input box with Send button, Enter-to-send, and optional voice input placeholder.",
+        "details": "Implementation details:\n- src/components/MessageBubble.tsx\n  type Props = { role: 'doctor'|'agent'; content: string };\n  export default function MessageBubble({ role, content }: Props){\n    const isUser = role==='doctor';\n    return (\n      <div className={`flex ${isUser?'justify-end':'justify-start'} my-1`}>\n        <div aria-label={isUser?'Doctor message':'Agent message'}\n             className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow ${isUser?'bg-brand.primary text-white':'bg-brand.secondary text-gray-900'}`}>\n          {content}\n        </div>\n      </div>\n    );\n  }\n\n- src/components/InputBox.tsx\n  import { useState } from 'react';\n  type Props = { disabled?: boolean; onSend: (text:string)=>void };\n  export default function InputBox({ disabled, onSend }: Props){\n    const [text, setText] = useState('');\n    const send = ()=>{ if(text.trim()){ onSend(text.trim()); setText(''); }};\n    return (\n      <div className=\"flex items-center gap-2 p-2 border-t\">\n        <button className=\"hidden\" aria-label=\"Voice input (coming soon)\" title=\"Voice input (coming soon)\" disabled>🎤</button>\n        <input aria-label=\"Chat input\" className=\"flex-1 border rounded px-3 py-2\" placeholder=\"Type here…\" value={text}\n               onChange={e=>setText(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } }} disabled={disabled} />\n        <button className=\"bg-brand.primary text-white px-4 py-2 rounded disabled:opacity-50\" onClick={send} disabled={disabled}>Send</button>\n      </div>\n    );\n  }\n- Ensure input is accessible (labels/aria) and keyboard friendly.\n",
+        "testStrategy": "- Unit tests: \n  - Enter key triggers onSend and clears input.\n  - Button disabled when `disabled` prop is true.\n  - MessageBubble aligns correctly for doctor vs agent.\n- Accessibility check: tab order to input and send button; ARIA labels present.",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "ChatPanel component integrating hooks and components",
+        "description": "Compose ChatPanel with message list, auto-scroll, loading indicator, and integration to API via useChat. Display both doctor and agent messages.",
+        "details": "Implementation details:\n- src/components/ChatPanel.tsx\n  import MessageBubble from './MessageBubble';\n  import InputBox from './InputBox';\n  import { useChat } from '../hooks/useChat';\n  type Props = { onPrescriptionUpdate?: (p:string)=>void };\n  export default function ChatPanel(){\n    const { messages, loading, error, send, scrollRef } = useChat();\n    return (\n      <div className=\"h-full flex flex-col border rounded-md\">\n        <div className=\"flex-1 overflow-y-auto p-3 space-y-1\" ref={scrollRef} aria-live=\"polite\">\n          {messages.map(m => <MessageBubble key={m.id} role={m.role} content={m.content} />)}\n          {loading && <div className=\"text-xs text-gray-500\">Agent is typing…</div>}\n          {error && <div role=\"alert\" className=\"text-xs text-red-600\">{error}</div>}\n        </div>\n        <InputBox disabled={loading} onSend={send} />\n      </div>\n    );\n  }\n- Auto-scroll: handled by useChat’s ref; ensure it scrolls after each render with new messages (ref scroll call in hook or useEffect in component).\n- Performance: Render immediately upon response to meet 300ms post-response requirement.\n",
+        "testStrategy": "- Integration test with MSW: \n  - Type a message and click Send; shows user bubble, loading indicator, then agent bubble.\n  - Verify container scrolls to bottom after new message.\n  - Ensure loading state disables input and button.\n- Error path: simulate 500 response; error alert shows.",
+        "priority": "high",
+        "dependencies": [
+          4,
+          6
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "PrescriptionPage layout and responsive behavior (70/30 split, tablet stack, mobile tabs)",
+        "description": "Create the main page that arranges PrescriptionPanel (70%) and ChatPanel (30%) on desktop, stacks vertically on tablet, and shows tab toggle on mobile.",
+        "details": "Implementation details:\n- src/pages/PrescriptionPage.tsx\n  import { useState } from 'react';\n  import PrescriptionPanel from '../components/PrescriptionPanel';\n  import ChatPanel from '../components/ChatPanel';\n  import { usePrescription } from '../hooks/usePrescription';\n  export default function PrescriptionPage(){\n    const { prescription, loading } = usePrescription();\n    const [mobileTab, setMobileTab] = useState<'prescription'|'chat'>('prescription');\n    return (\n      <div className=\"h-screen p-3 md:p-4 bg-white\">\n        {/* Mobile tabs */}\n        <div className=\"md:hidden flex gap-2 mb-2\">\n          <button onClick={()=>setMobileTab('prescription')} className={`flex-1 py-2 rounded ${mobileTab==='prescription'?'bg-brand.primary text-white':'bg-brand.secondary'}`}>Prescription</button>\n          <button onClick={()=>setMobileTab('chat')} className={`flex-1 py-2 rounded ${mobileTab==='chat'?'bg-brand.primary text-white':'bg-brand.secondary'}`}>Chat</button>\n        </div>\n        {/* Desktop/tablet layout */}\n        <div className=\"hidden md:grid h-[calc(100%-1rem)] grid-cols-10 gap-4\">\n          <div className=\"col-span-7\"><PrescriptionPanel prescription={prescription} loading={loading} /></div>\n          <div className=\"col-span-3\"><ChatPanel/></div>\n        </div>\n        {/* Mobile content */}\n        <div className=\"md:hidden h-[calc(100%-3.5rem)]\">\n          {mobileTab==='prescription' ? (\n            <PrescriptionPanel prescription={prescription} loading={loading}/>\n          ) : (\n            <ChatPanel/>\n          )}\n        </div>\n      </div>\n    );\n  }\n- Accepts prescription from hook; ChatPanel updates it via hook internals.\n- Tablet stacking: achieved via `md:grid` (desktop/tablet) and `sm`/`md` breakpoints. If wanting vertical stack on tablet, use `lg:grid` and default vertical; adjust breakpoints as desired.\n- Ensure 70/30 desktop split using `grid-cols-10` with col-span 7/3.\n",
+        "testStrategy": "- Responsive tests: \n  - Desktop width: verify two columns rendered and widths ~70/30 (7/3 spans).\n  - Tablet width: verify vertical stack (adjust breakpoint check).\n  - Mobile width: tab buttons visible; switching tabs toggles panels.\n- Acceptance: Pass AC-1, AC-3, AC-4 visually and via DOM queries.",
+        "priority": "high",
+        "dependencies": [
+          2,
+          5,
+          7
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Mock API with MSW for local development and dummy data",
+        "description": "Provide dummy data handling via Mock Service Worker (MSW) for both endpoints to enable development without backend.",
+        "details": "Implementation details:\n- Install MSW: `npm i msw`.\n- src/mocks/handlers.ts\n  import { http, HttpResponse } from 'msw';\n  const samplePrescription = `# Prescription\\n\\n**Patient:** John Doe, 35, Male\\n\\n## Symptoms\\n- Fever for 3 days\\n- Cough\\n\\n## Diagnosis\\n- Viral Fever\\n\\n## Medicines\\n- Paracetamol 500mg — twice daily for 3 days\\n\\n## Advice\\n- Hydration\\n- Rest`;\n  export const handlers = [\n    http.post('/api/agent/message', async ({ request }) => {\n      const { message } = await request.json();\n      return HttpResponse.json({ prescription: samplePrescription, agentResponse: `Noted: ${message}` }, { status: 200 });\n    }),\n    http.get('/api/prescription/current', () => HttpResponse.json({ prescription: samplePrescription }))\n  ];\n- src/mocks/browser.ts\n  import { setupWorker } from 'msw';\n  import { handlers } from './handlers';\n  export const worker = setupWorker(...handlers);\n- Enable in `main` entry before rendering when `VITE_USE_MOCKS==='true'`:\n  if(import.meta.env.VITE_USE_MOCKS === 'true'){\n    const { worker } = await import('./mocks/browser');\n    await worker.start({ onUnhandledRequest: 'bypass' });\n  }\n- Document usage in README: set `VITE_USE_MOCKS=true` for dev.\n",
+        "testStrategy": "- With `VITE_USE_MOCKS=true`, start dev server and verify:\n  - Sending chat shows agent response echoing message and updates prescription.\n  - GET current prescription loads sample on page load.\n- Turn mocks off and ensure network errors surface as error alerts in ChatPanel.",
+        "priority": "medium",
+        "dependencies": [
+          3,
+          1
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Testing (Jest + React Testing Library), accessibility checks, and acceptance criteria verification",
+        "description": "Set up Jest + RTL, write core unit/integration tests for hooks and components, run basic a11y checks, and verify all acceptance criteria.",
+        "details": "Implementation details:\n- Install testing deps: `npm i -D jest @types/jest ts-jest @testing-library/react @testing-library/jest-dom whatwg-fetch msw`.\n- Configure Jest: `npx ts-jest config:init`; set `testEnvironment: jsdom` and add setupFilesAfterEnv to include `@testing-library/jest-dom`.\n- Example tests:\n  - useChat: mock `sendDoctorInput`, assert message append order and loading toggles.\n  - PrescriptionPanel: renders markdown safely, shows skeleton when loading.\n  - ChatPanel: full flow with MSW: type + send -> loader -> agent bubble.\n  - Layout: render PrescriptionPage with jsdom viewport widths (use `window.resizeTo`) and assert 70/30 classes present on desktop; tabs on mobile.\n- Accessibility: \n  - Add `aria-*` labels and roles; run basic RTL queries by role.\n  - Optional: add `axe-core` for dev-only checks.\n- CI script updates: add `\"test\": \"jest --passWithNoTests\"`.\n- Acceptance criteria mapping:\n  - AC-1: Layout test ensures 70/30 grid spans.\n  - AC-2: Chat triggers API and updates prescription (integration test).\n  - AC-3: Prescription renders formatted markdown.\n  - AC-4: Responsive tests across breakpoints.\n  - AC-5: TS strict config enforced; compile step in CI.\n  - AC-6: Lint and type-check job ensures no console warnings/errors (mock console and assert none in tests where relevant).\n",
+        "testStrategy": "- Run test suite: `npm run test`.\n- Manual a11y review with Lighthouse; ensure WCAG 2.1 AA basics (labels, contrast, keyboard nav).\n- Final manual UAT: \n  - Load page: blank prescription + chat visible.\n  - Send sample messages: verify agent output and prescription update.\n  - Resize to tablet/mobile and verify behavior.",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "status": "done",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-11-09T15:58:06.551Z",
+      "updated": "2025-11-09T17:39:09.513Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

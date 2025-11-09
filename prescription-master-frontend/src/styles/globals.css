@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-white text-gray-900 font-sans;
+}
+
+/* Chat bubble utility classes */
+@layer components {
+  .bubble-ai {
+    @apply bg-brand-secondary text-gray-900 rounded-lg px-4 py-3 max-w-[80%] shadow-sm;
+  }
+
+  .bubble-user {
+    @apply bg-brand-primary text-white rounded-lg px-4 py-3 max-w-[80%] shadow-sm;
+  }
+}
+
